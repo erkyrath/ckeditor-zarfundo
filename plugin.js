@@ -5,7 +5,9 @@
 
 /**
  * @fileOverview Undo/Redo system for saving a shapshot for document modification
- *		and other recordable changes.
+ *    and other recordable changes.
+ *
+ * Customized by Andrew Plotkin to integrate with an external undo system.
  */
 
 'use strict';
@@ -18,7 +20,7 @@
 		],
 		backspaceOrDelete = { 8: 1, 46: 1 };
 
-	CKEDITOR.plugins.add( 'undo', {
+	CKEDITOR.plugins.add( 'zarfundo', {
 		// jscs:disable maximumLineLength
 		lang: 'af,ar,bg,bn,bs,ca,cs,cy,da,de,de-ch,el,en,en-au,en-ca,en-gb,eo,es,et,eu,fa,fi,fo,fr,fr-ca,gl,gu,he,hi,hr,hu,id,is,it,ja,ka,km,ko,ku,lt,lv,mk,mn,ms,nb,nl,no,pl,pt,pt-br,ro,ru,si,sk,sl,sq,sr,sr-latn,sv,th,tr,tt,ug,uk,vi,zh,zh-cn', // %REMOVE_LINE_CORE%
 		// jscs:enable maximumLineLength
@@ -30,23 +32,31 @@
 
 			var undoCommand = editor.addCommand( 'undo', {
 				exec: function() {
-					if ( undoManager.undo() ) {
-						editor.selectionChange();
-						this.fire( 'afterUndo' );
-					}
+                                    if (!undoManager.undoable()) {
+                                        editor.fire('tryOuterUndo');
+                                        return;
+                                    }
+                                    if ( undoManager.undo() ) {
+                                        editor.selectionChange();
+                                        this.fire( 'afterUndo' );
+                                    }
 				},
-				startDisabled: true,
+				startDisabled: false,
 				canUndo: false
 			} );
 
 			var redoCommand = editor.addCommand( 'redo', {
 				exec: function() {
-					if ( undoManager.redo() ) {
-						editor.selectionChange();
-						this.fire( 'afterRedo' );
-					}
+                                    if (!undoManager.redoable()) {
+                                        editor.fire('tryOuterRedo');
+                                        return;
+                                    }
+                                    if ( undoManager.redo() ) {
+                                        editor.selectionChange();
+                                        this.fire( 'afterRedo' );
+                                    }
 				},
-				startDisabled: true,
+				startDisabled: false,
 				canUndo: false
 			} );
 
@@ -57,8 +67,8 @@
 			] );
 
 			undoManager.onChange = function() {
-				undoCommand.setState( undoManager.undoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
-				redoCommand.setState( undoManager.redoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
+			//	undoCommand.setState( undoManager.undoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
+			//	redoCommand.setState( undoManager.redoable() ? CKEDITOR.TRISTATE_OFF : CKEDITOR.TRISTATE_DISABLED );
 			};
 
 			function recordCommand( event ) {
